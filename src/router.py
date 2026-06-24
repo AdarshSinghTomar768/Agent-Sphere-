@@ -33,6 +33,45 @@ def route_question(question):
         return "RAG"
 
     # ----------------------------------
+    # STATISTICS
+    # (checked before MATH because the
+    #  math keywords are broad and would
+    #  otherwise swallow stats questions)
+    # ----------------------------------
+
+    stats_keywords = [
+        "mean",
+        "median",
+        "mode",
+        "variance",
+        "standard deviation",
+        "probability",
+        "distribution"
+    ]
+
+    if any(word in q for word in stats_keywords):
+        return "STATISTICS"
+
+    # ----------------------------------
+    # LOGIC
+    # (checked before MATH so a "solve this
+    #  puzzle" question routes to logic, not
+    #  to the math agent)
+    # ----------------------------------
+
+    logic_keywords = [
+        "puzzle",
+        "logic",
+        "reasoning",
+        "arrangement",
+        "circle",
+        "seating"
+    ]
+
+    if any(word in q for word in logic_keywords):
+        return "LOGIC"
+
+    # ----------------------------------
     # MATH
     # ----------------------------------
 
@@ -55,39 +94,6 @@ def route_question(question):
 
     if re.search(r"\d+\s*[\+\-\*/]\s*\d+", q):
         return "MATH"
-
-    # ----------------------------------
-    # STATISTICS
-    # ----------------------------------
-
-    stats_keywords = [
-        "mean",
-        "median",
-        "mode",
-        "variance",
-        "standard deviation",
-        "probability",
-        "distribution"
-    ]
-
-    if any(word in q for word in stats_keywords):
-        return "STATISTICS"
-
-    # ----------------------------------
-    # LOGIC
-    # ----------------------------------
-
-    logic_keywords = [
-        "puzzle",
-        "logic",
-        "reasoning",
-        "arrangement",
-        "circle",
-        "seating"
-    ]
-
-    if any(word in q for word in logic_keywords):
-        return "LOGIC"
 
     # ----------------------------------
     # GENERAL KNOWLEDGE

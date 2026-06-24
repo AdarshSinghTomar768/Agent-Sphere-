@@ -1,6 +1,6 @@
 import os
 
-from langchain_community.document_loaders import UnstructuredPDFLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 
@@ -28,10 +28,7 @@ def load_documents():
 
             print(f"\nLoading: {file}")
 
-            loader = UnstructuredPDFLoader(
-                pdf_path,
-                mode="single"
-            )
+            loader = PyPDFLoader(pdf_path)
             docs = loader.load()
 
             for doc in docs:
