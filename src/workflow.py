@@ -204,7 +204,7 @@ def rewrite_node(state: AgentState):
             "retry_count": state.get(
                 "retry_count",
                 0
-            ) + 1
+            ) 
         }
 
     # ----------------------------------
@@ -246,26 +246,8 @@ def retrieve_node(state: AgentState):
     print("ACTIVE DOCUMENT:", active_doc)
     print("==============================")
 
-    question = query.lower()
-
-    docs = vectorstore.similarity_search(
-        query,
-        k=10
-    )
-
-    print("\n===== BEFORE FILTER =====")
-
-    for doc in docs:
-
-        print(
-            doc.metadata.get(
-                "source",
-                "NO SOURCE"
-            )
-        )
-
     # ------------------------------------------
-    # ACTIVE DOCUMENT FILTER
+    # DOCUMENT MODE
     # ------------------------------------------
 
     if active_doc:
@@ -274,80 +256,29 @@ def retrieve_node(state: AgentState):
             active_doc
         ).lower().strip()
 
-        filtered_docs = []
-
-        for doc in docs:
-
-            source = doc.metadata.get(
-                "source",
-                ""
-            )
-
-            filename = os.path.basename(
-                source
-            ).lower().strip()
-
-            if filename == active_name:
-
-                filtered_docs.append(doc)
-
         print("\nACTIVE DOC:", active_name)
+
+        all_docs = list(
+            vectorstore.docstore._dict.values()
+        )
+
+        docs = [
+            doc
+            for doc in all_docs
+            if os.path.basename(
+                doc.metadata.get(
+                    "source",
+                    ""
+                )
+            ).lower().strip() == active_name
+        ]
 
         print(
             "\nFILTERED DOCS:",
-            len(filtered_docs)
+            len(docs)
         )
 
-        # ----------------------------------
-        # DOCUMENT SUMMARY MODE
-        # ----------------------------------
-
-        if (
-            "this pdf" in question
-            or "this document" in question
-            or "what is this pdf about" in question
-            or "what is this document about" in question
-            or "summarize this pdf" in question
-            or "summarize this document" in question
-            or question.strip() == "summarize it"
-            or question.strip() == "tell me about it"
-            or question.strip() == "explain it"
-            or question.strip() == "what is it about"
-        ):
-
-            all_docs = (
-                list(vectorstore.docstore._dict.values())
-                if hasattr(
-                    vectorstore.docstore,
-                    "_dict"
-                )
-                else []
-            )
-
-            filtered_docs = [
-                doc
-                for doc in all_docs
-                if os.path.basename(
-                    doc.metadata.get(
-                        "source",
-                        ""
-                    )
-                ).lower().strip() == active_name
-            ]
-
-            print(
-                f"\nDIRECT DOCUMENT MODE: {len(filtered_docs)} chunks loaded"
-            )
-
-        if len(filtered_docs) > 0:
-
-            docs = filtered_docs
-
-        else:
-
-            print(
-                "No matching chunks found for active document."
-            )
+        if len(docs) == 0:
 
             return {
                 "context": "",
@@ -356,15 +287,17 @@ def retrieve_node(state: AgentState):
             }
 
     # ------------------------------------------
-    # DEBUG PRINT
+    # NORMAL RAG MODE
     # ------------------------------------------
 
-    print("\n===== RETRIEVED DOCUMENTS =====")
+    else:
 
-    print(
-        "ACTIVE DOCUMENT:",
-        active_doc
-    )
+        docs = vectorstore.similarity_search(
+            query,
+            k=10
+        )
+
+    print("\n===== RETRIEVED DOCUMENTS =====")
 
     print(
         "DOC COUNT:",
@@ -386,14 +319,6 @@ def retrieve_node(state: AgentState):
         print(doc.page_content[:500])
 
         print("-" * 60)
-
-    if len(docs) == 0:
-
-        return {
-            "context": "",
-            "sources": [],
-            "confidence": "Low"
-        }
 
     context = "\n\n".join(
         doc.page_content
@@ -491,12 +416,15 @@ def answer_node(state: AgentState):
         You are answering questions about a document.
 
         Rules:
-        1. Answer ONLY from the provided context.
-        2. If the answer is not found, say:
-        "I could not find that information in the document."
-        3. Never make assumptions.
-        4. Never use outside knowledge.
-        5. Keep answers concise.
+        1. Answer ONLY using information present in the context.
+        2. If the question asks who a person is, create a short professional summary using:
+        - Name
+        - Experience
+        - Projects
+        - Skills
+        3. Do not invent information.
+        4. If information is missing, say:
+        "The document does not contain that information."
 
         Context:
         {state["context"]}
@@ -540,14 +468,14 @@ def web_answer_node(state: AgentState):
     print("WEB ANSWER NODE")
 
     prompt = f"""
-Answer using the web search results.
+        Answer using the web search results.
 
-Question:
-{state['question']}
+        Question:
+        {state['question']}
 
-Web Search Results:
-{state['web_context']}
-"""
+        Web Search Results:
+        {state['web_context']}
+        """
 
     response = llm.invoke(prompt)
 
